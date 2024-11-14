@@ -1,0 +1,149 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ROLES {
+  ADMIN
+  SELLER
+  BUYER
+  DELIVERY
+}
+
+model User {
+  id             String         @id @default(uuid()) @db.Uuid
+  firstName      String
+  lastName       String
+  password       String
+  role           ROLES          @default(SELLER)
+  email          String         @unique
+  activationLink String         @unique
+  isActivated    Boolean        @default(false)
+  Transaction    Transaction[]
+  cart           Cart?
+  profile        UserProfile?
+  token          RefreshTokens?
+  shop           Shop?
+  createAt       DateTime       @default(now())
+  updateAt       DateTime       @updatedAt
+}
+
+model UserProfile {
+  id           String   @id @default(uuid()) @db.Uuid
+  username     String
+  bio          String?  @db.Text
+  profileImage String
+  userID       String   @unique @db.Uuid
+  user         User     @relation(fields: [userID], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createAt     DateTime @default(now())
+  updateAt     DateTime @updatedAt
+}
+
+model RefreshTokens {
+  id     Int    @id @default(autoincrement())
+  userId String @unique @db.Uuid
+  token  String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+enum ShopCategory {
+  LOGISTICS
+  BOUTIQUE
+  FOODSTUFF
+  UTENSILS
+  TECH
+  DRUGS
+}
+
+model Shop {
+  id           String       @id @default(uuid()) @db.Uuid
+  shopName     String       @unique
+  shopImage    String[]
+  aboutShop    String       @db.Text
+  userID       String       @unique @db.Uuid
+  user         User         @relation(fields: [userID], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  contact      Contact?
+  shopCategory ShopCategory @default(BOUTIQUE)
+  products     Product[]
+  createAt     DateTime     @default(now())
+  updateAt     DateTime     @updatedAt
+}
+
+model Contact {
+  id          Int      @id @default(autoincrement())
+  phoneNumber String   @unique
+  email       String   @unique
+  address     String?  @db.Text
+  socials     String[]
+  shopID      String   @unique @db.Uuid
+  shop        Shop     @relation(fields: [shopID], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createAt    DateTime @default(now())
+  updateAt    DateTime @updatedAt
+}
+
+enum ProductStatus {
+  AVAILABLE
+  OUT_OF_STOCK
+}
+
+model Product {
+  id          String        @id @default(uuid()) @db.Uuid
+  name        String
+  status      ProductStatus @default(AVAILABLE)
+  price       Int
+  description String        @db.Text
+  images      String[]
+  cartId      String?        @db.Uuid
+  CartItems   CartItem[]
+  shopID      String        @db.Uuid
+  shop        Shop          @relation(fields: [shopID], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createAt    DateTime      @default(now())
+  updateAt    DateTime      @updatedAt
+}
+
+model Cart {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @unique   @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  CartItems   CartItem[]
+}
+model CartItem {
+  id        String      @id @default(uuid()) @db.Uuid
+  productId String       @db.Uuid
+  cartId    String       @db.Uuid
+  quantity  Int      @default(1)
+  Product   Product  @relation(fields: [productId], references: [id])
+  Cart      Cart     @relation(fields: [cartId], references: [id])
+}
+model Category {
+  id Int @id @default(autoincrement())
+}
+
+enum TransactionStatus {
+  pending
+  failed
+  successful
+}
+
+model Transaction {
+  id          String            @id @default(uuid()) @db.Uuid
+  amount      Float
+  user_id     String            @db.Uuid
+  user        User              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  status      TransactionStatus @default(pending)
+  description String?
+  createdAt   DateTime          @default(now())
+  updateAt    DateTime          @updatedAt
+}
